@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MarHub — Roblox Script Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='24'>🔑</text></svg>">
+  <style>
+    body { background: linear-gradient(180deg,#0f172a 0%, #071033 100%); font-family: 'Inter', sans-serif; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(8px); transition: all 0.2s ease; }
+    .glass:hover { background: rgba(255,255,255,0.08); }
+    pre.code { white-space: pre-wrap; word-break: break-word; }
+    button { transition: all 0.2s ease; }
+    button:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 text-white">
+  <div class="w-full max-w-5xl mx-auto">
+    <header class="mb-8 flex items-center justify-between">
+      <h1 class="text-4xl font-extrabold flex items-center gap-2">
+        <span>🔑</span> MarHub
+        <span class="text-indigo-400 text-lg font-semibold">Script Hub</span>
+      </h1>
+      <div class="text-sm opacity-80">Protected area — enter key to unlock scripts</div>
+    </header>
+
+    <main class="glass rounded-3xl p-8 shadow-xl">
+      <section class="mb-8">
+        <label class="block text-xs uppercase font-semibold opacity-80">Enter Access Key</label>
+        <div class="mt-2 flex gap-3">
+          <input id="keyInput" class="flex-1 px-4 py-3 rounded-xl bg-transparent border border-white/10 outline-none placeholder:text-white/40" placeholder="Enter your key here" />
+          <button id="unlockBtn" class="px-5 py-3 bg-indigo-500 rounded-xl font-semibold hover:bg-indigo-600">Unlock</button>
+        </div>
+        <p id="keyMsg" class="mt-2 text-sm text-amber-300 hidden"></p>
+      </section>
+
+      <section id="scriptsArea" class="hidden">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold">Available Scripts</h2>
+          <div class="text-sm opacity-70">Manage scripts below — copy or preview</div>
+        </div>
+
+        <div id="scriptsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        </div>
+
+        <div class="mt-8 text-sm opacity-70">Note: Copy scripts and run them in Roblox. Client-side key checks are for demo only — not secure for production.</div>
+      </section>
+
+      <section id="adminArea" class="hidden mt-8 glass rounded-2xl p-6">
+        <h3 class="font-semibold mb-4 text-lg">Add / Edit Script</h3>
+        <input id="scriptName" class="w-full mb-3 px-4 py-2 rounded bg-transparent border border-white/8 placeholder:text-white/40" placeholder="Script name (e.g. Hoopz_scripts)" />
+        <textarea id="scriptCode" rows="6" class="w-full px-4 py-2 rounded bg-transparent border border-white/8 placeholder:text-white/40" placeholder="Paste the script code here"></textarea>
+        <div class="mt-3 flex gap-3 flex-wrap">
+          <button id="addScriptBtn" class="px-4 py-2 bg-green-600 rounded-xl font-semibold hover:bg-green-700">Save script</button>
+          <button id="exportBtn" class="px-4 py-2 bg-gray-700 rounded-xl hover:bg-gray-600">Download JSON</button>
+          <button id="clearBtn" class="px-4 py-2 bg-red-600 rounded-xl hover:bg-red-700">Clear scripts</button>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="mt-6 text-xs opacity-60 text-center">Built with ❤️ — drop your Roblox scripts into the admin area after unlocking.</footer>
+  </div>
+
+  <script>
+    const VALID_KEYS = ['marhub-demo', 'testkey123', 'freekey'];
+    const DEFAULT_SCRIPTS = [{ name: 'Hoopz_scripts', code: "loadstring(game:HttpGet('https://raw.githubusercontent.com/poorguy123monkey/eclipsehub1.3/refs/heads/main/message%20(19).txt'))()" }];
+    let scripts = JSON.parse(localStorage.getItem('marhub_scripts') || 'null') || DEFAULT_SCRIPTS.slice();
+    let unlocked = false;
+    function el(id){ return document.getElementById(id); }
+    function show(msg, klass){ const k = el('keyMsg'); k.textContent = msg; k.className = 'mt-2 text-sm ' + (klass||'text-amber-300'); k.classList.remove('hidden'); }
+    function renderScripts(){
+      const container = el('scriptsList'); container.innerHTML='';
+      scripts.forEach((s, idx)=>{
+        const card = document.createElement('div');
+        card.className='p-5 rounded-2xl glass';
+        card.innerHTML=`
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-semibold text-lg">${escapeHtml(s.name)}</div>
+              <div class="text-xs opacity-70 mt-1">Script preview:</div>
+            </div>
+            <div class="flex gap-2">
+              <button data-idx="${idx}" class="copyBtn px-3 py-1 rounded bg-indigo-500 text-sm">Copy</button>
+              <button data-idx="${idx}" class="viewBtn px-3 py-1 rounded bg-gray-700 text-sm">Preview</button>
+            </div>
+          </div>
+          <pre class="mt-3 code text-xs" id="code-${idx}">${escapeHtml(s.code)}</pre>
+        `;
+        container.appendChild(card);
+      });
+      document.querySelectorAll('.copyBtn').forEach(btn=>btn.addEventListener('click',(e)=>{const i=+e.currentTarget.dataset.idx;navigator.clipboard.writeText(scripts[i].code).then(()=>alert('Script copied:\n'+scripts[i].name));}));
+      document.querySelectorAll('.viewBtn').forEach(btn=>btn.addEventListener('click',(e)=>{const i=+e.currentTarget.dataset.idx;alert('Preview — '+scripts[i].name+'\n\n'+scripts[i].code);}));
+    }
+    function escapeHtml(text){ return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function saveScripts(){ localStorage.setItem('marhub_scripts', JSON.stringify(scripts)); }
+    el('unlockBtn').addEventListener('click',()=>{
+      const key = el('keyInput').value.trim(); if(!key){ show('Please enter a key','text-red-400'); return; }
+      if(VALID_KEYS.includes(key)){
+        unlocked=true; el('scriptsArea').classList.remove('hidden'); el('adminArea').classList.remove('hidden'); show('Unlocked! You can now view scripts.'); el('keyInput').value=''; renderScripts(); sessionStorage.setItem('marhub_unlocked','1');
+      } else { show('Invalid key.','text-red-400'); }
+    });
+    el('addScriptBtn').addEventListener('click',()=>{const name=el('scriptName').value.trim();const code=el('scriptCode').value.trim();if(!name||!code){alert('Provide both name and code.');return;} scripts.push({name,code});saveScripts();renderScripts();el('scriptName').value='';el('scriptCode').value='';});
+    el('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(scripts,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='marhub_scripts.json';a.click();URL.revokeObjectURL(url);});
+    el('clearBtn').addEventListener('click',()=>{if(!confirm('Clear all scripts from local storage?')) return; scripts=[]; saveScripts(); renderScripts();});
+    if(sessionStorage.getItem('marhub_unlocked')==='1'){ el('scriptsArea').classList.remove('hidden'); el('adminArea').classList.remove('hidden'); renderScripts();}
+    renderScripts();
+  </script>
+</body>
+</html>
